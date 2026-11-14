@@ -36,71 +36,106 @@ class CursoListaPdf
             $paginas = collect([collect([])]);
         }
 
+        $logoPath = public_path('app/logo-ut-pdf.z');
+        $hasLogo = is_file($logoPath);
+        $logoStream = $hasLogo ? file_get_contents($logoPath) : null;
+
         $totalPaginas = $paginas->count();
         $streams = [];
+
+        $docenteNombre = $curso->docente
+            ? trim($curso->docente->nombres.' '.$curso->docente->apellidos)
+            : 'Sin asignar';
+        $docenteDoc = $curso->docente?->documento ? 'Doc. '.$curso->docente->documento : '';
+        $docenteCorreo = $curso->docente?->correo ?? '—';
+        $inscritos = $matriculas->count();
+        $fechaHoy = now()->timezone('America/Bogota')->format('d/m/Y H:i');
 
         foreach ($paginas as $idxPagina => $chunk) {
             $s = [];
 
-            // Header institutional red bar
-            $s[] = '0.937 0.169 0.176 rg';
-            $s[] = '0 828 595.28 14 re f';
+            // Header with UT Logo on clean white background
+            if ($hasLogo) {
+                // Draw logo at x=42, y=744, width=96, height=67.4
+                $s[] = 'q 96 0 0 67.4 42 744 cm /Im1 Do Q';
+                $tx = 152;
+            } else {
+                $tx = 42;
+            }
 
-            // Header dark bar
-            $s[] = '0.118 0.118 0.141 rg';
-            $s[] = '36 760 523.28 54 re f';
+            // Header titles (clean dark typography, not heavy)
+            $s[] = '0.85 0.16 0.17 rg';
+            $s[] = "BT /F2 8 Tf {$tx} 796 Td (".self::win1252('UNIVERSIDAD DEL TOLIMA · REGISTRO ACADÉMICO').') Tj ET';
 
-            // Header text
-            $s[] = '1 1 1 rg';
-            $s[] = 'BT /F2 14 Tf 50 792 Td ('.self::win1252('UNIVERSIDAD DEL TOLIMA · REGISTRO ACADÉMICO').') Tj ET';
-            $s[] = '0.988 0.647 0.647 rg';
-            $s[] = 'BT /F1 9.5 Tf 50 774 Td ('.self::win1252('LISTADO OFICIAL DE ESTUDIANTES MATRICULADOS Y CONTROL DE ASISTENCIA').') Tj ET';
+            $s[] = '0.13 0.14 0.16 rg';
+            $s[] = "BT /F2 15 Tf {$tx} 777 Td (".self::win1252('Listado de Estudiantes Matriculados').') Tj ET';
 
-            // Course metadata box
-            $s[] = '0.973 0.976 0.980 rg';
-            $s[] = '36 686 523.28 64 re f';
-            $s[] = '0.88 0.89 0.91 RG 0.8 w';
-            $s[] = '36 686 523.28 64 re S';
+            $s[] = '0.45 0.47 0.51 rg';
+            $s[] = "BT /F1 9 Tf {$tx} 761 Td (".self::win1252('Reporte académico por asignatura · Generado el '.$fechaHoy).') Tj ET';
 
-            // Red left accent on metadata box
-            $s[] = '0.937 0.169 0.176 rg';
-            $s[] = '36 686 4 64 re f';
+            // Subtle thin red accent line + soft gray line under header
+            $s[] = '0.937 0.169 0.176 RG 1.2 w';
+            $s[] = '42 734 m 160 734 l S';
+            $s[] = '0.88 0.89 0.91 RG 0.7 w';
+            $s[] = '160 734 m 553.28 734 l S';
 
-            $docenteNombre = $curso->docente
-                ? ($curso->docente->nombres.' '.$curso->docente->apellidos.($curso->docente->documento ? ' (Doc. '.$curso->docente->documento.')' : ''))
-                : 'Sin asignar';
-            $docenteCorreo = $curso->docente?->correo ?? '';
-            $inscritos = $matriculas->count();
-            $fechaHoy = now()->timezone('America/Bogota')->format('d/m/Y H:i');
+            // Well-structured 2-column course metadata card (very soft neutral background)
+            $s[] = '0.984 0.986 0.988 rg';
+            $s[] = '42 652 511.28 68 re f';
+            $s[] = '0.89 0.90 0.92 RG 0.7 w';
+            $s[] = '42 652 511.28 68 re S';
 
-            $s[] = '0.15 0.15 0.18 rg';
-            $s[] = 'BT /F2 10.5 Tf 48 733 Td ('.self::win1252('Asignatura: '.$curso->codigo.' - '.$curso->nombre).') Tj ET';
-            $s[] = 'BT /F1 9 Tf 48 716 Td ('.self::win1252('Docente titular: '.$docenteNombre.($docenteCorreo ? ' · '.$docenteCorreo : '')).') Tj ET';
-            $s[] = 'BT /F1 9 Tf 48 700 Td ('.self::win1252('Periodo: '.$curso->periodo.'   |   Créditos: '.$curso->creditos.'   |   Estudiantes matriculados: '.$inscritos.' / '.$curso->cupo_maximo.'   |   Fecha: '.$fechaHoy).') Tj ET';
+            // Vertical divider inside metadata card
+            $s[] = '0.91 0.92 0.94 RG 0.6 w';
+            $s[] = '335 660 m 335 712 l S';
 
-            // Table Header
-            $tableTop = 668;
-            $rowH = 22;
-            $s[] = '0.118 0.118 0.141 rg';
-            $s[] = "36 {$tableTop} 523.28 {$rowH} re f";
+            // Left column of course metadata
+            $s[] = '0.45 0.47 0.51 rg';
+            $s[] = 'BT /F2 7.5 Tf 54 704 Td ('.self::win1252('ASIGNATURA').') Tj ET';
+            $s[] = '0.13 0.14 0.16 rg';
+            $s[] = 'BT /F2 10.5 Tf 54 691 Td ('.self::win1252(self::trunc($curso->codigo.' · '.$curso->nombre, 46)).') Tj ET';
 
-            $s[] = '1 1 1 rg';
-            $hy = $tableTop + 7;
-            $s[] = "BT /F2 8.5 Tf 42 {$hy} Td (".self::win1252('#').') Tj ET';
-            $s[] = "BT /F2 8.5 Tf 64 {$hy} Td (".self::win1252('DOCUMENTO').') Tj ET';
-            $s[] = "BT /F2 8.5 Tf 136 {$hy} Td (".self::win1252('ESTUDIANTE (APELLIDOS Y NOMBRES)').') Tj ET';
-            $s[] = "BT /F2 8.5 Tf 292 {$hy} Td (".self::win1252('CORREO INSTITUCIONAL').') Tj ET';
-            $s[] = "BT /F2 8.5 Tf 422 {$hy} Td (".self::win1252('PROGRAMA').') Tj ET';
-            $s[] = "BT /F2 8.5 Tf 514 {$hy} Td (".self::win1252('FIRMA').') Tj ET';
+            $s[] = '0.45 0.47 0.51 rg';
+            $s[] = 'BT /F2 7.5 Tf 54 675 Td ('.self::win1252('DOCENTE TITULAR').') Tj ET';
+            $s[] = '0.20 0.21 0.24 rg';
+            $infoDocente = $docenteNombre.($docenteDoc ? " ({$docenteDoc})" : '').' · '.$docenteCorreo;
+            $s[] = 'BT /F1 9 Tf 54 662 Td ('.self::win1252(self::trunc($infoDocente, 54)).') Tj ET';
+
+            // Right column of course metadata
+            $s[] = '0.45 0.47 0.51 rg';
+            $s[] = 'BT /F2 7.5 Tf 348 704 Td ('.self::win1252('PERIODO Y CRÉDITOS').') Tj ET';
+            $s[] = '0.13 0.14 0.16 rg';
+            $s[] = 'BT /F1 9.5 Tf 348 691 Td ('.self::win1252('Periodo '.$curso->periodo.'   ·   '.$curso->creditos.' créditos académicos').') Tj ET';
+
+            $s[] = '0.45 0.47 0.51 rg';
+            $s[] = 'BT /F2 7.5 Tf 348 675 Td ('.self::win1252('ESTUDIANTES INSCRITOS').') Tj ET';
+            $s[] = '0.13 0.14 0.16 rg';
+            $s[] = 'BT /F1 9.5 Tf 348 662 Td ('.self::win1252($inscritos.' matriculados (Cupo máximo: '.$curso->cupo_maximo.')').') Tj ET';
+
+            // Table Header (soft light neutral gray, clean typography)
+            $tableTop = 616;
+            $rowH = 24;
+            $s[] = '0.949 0.953 0.961 rg';
+            $s[] = "42 {$tableTop} 511.28 {$rowH} re f";
+            $s[] = '0.84 0.85 0.88 RG 0.7 w';
+            $s[] = "42 {$tableTop} 511.28 {$rowH} re S";
+
+            $s[] = '0.28 0.30 0.35 rg';
+            $hy = $tableTop + 8;
+            $s[] = "BT /F2 8 Tf 50 {$hy} Td (".self::win1252('N.º').') Tj ET';
+            $s[] = "BT /F2 8 Tf 80 {$hy} Td (".self::win1252('DOCUMENTO').') Tj ET';
+            $s[] = "BT /F2 8 Tf 164 {$hy} Td (".self::win1252('APELLIDOS Y NOMBRES').') Tj ET';
+            $s[] = "BT /F2 8 Tf 326 {$hy} Td (".self::win1252('CORREO INSTITUCIONAL').') Tj ET';
+            $s[] = "BT /F2 8 Tf 454 {$hy} Td (".self::win1252('PROGRAMA ACADÉMICO').') Tj ET';
 
             if ($chunk->isEmpty()) {
-                $yEmpty = $tableTop - 36;
-                $s[] = '0.99 0.99 0.99 rg';
-                $s[] = "36 {$yEmpty} 523.28 36 re f";
-                $s[] = '0.88 0.89 0.91 RG 0.6 w';
-                $s[] = "36 {$yEmpty} 523.28 36 re S";
-                $s[] = '0.45 0.45 0.50 rg';
-                $s[] = 'BT /F1 9.5 Tf 165 '.($yEmpty + 14).' Td ('.self::win1252('No hay estudiantes con matrícula activa en este curso.').') Tj ET';
+                $yEmpty = $tableTop - 42;
+                $s[] = '1 1 1 rg';
+                $s[] = "42 {$yEmpty} 511.28 42 re f";
+                $s[] = '0.89 0.90 0.92 RG 0.6 w';
+                $s[] = "42 {$yEmpty} 511.28 42 re S";
+                $s[] = '0.45 0.47 0.51 rg';
+                $s[] = 'BT /F1 9.5 Tf 168 '.($yEmpty + 17).' Td ('.self::win1252('No hay estudiantes con matrícula activa en este curso.').') Tj ET';
             } else {
                 $rowIndex = $idxPagina * $filasPorPagina;
                 foreach ($chunk as $i => $mat) {
@@ -108,51 +143,48 @@ class CursoListaPdf
                     $y = $tableTop - (($i + 1) * $rowH);
 
                     if ($i % 2 === 1) {
-                        $s[] = '0.976 0.980 0.984 rg';
-                        $s[] = "36 {$y} 523.28 {$rowH} re f";
+                        $s[] = '0.988 0.990 0.992 rg';
+                        $s[] = "42 {$y} 511.28 {$rowH} re f";
                     }
-                    $s[] = '0.89 0.90 0.92 RG 0.5 w';
-                    $s[] = "36 {$y} 523.28 {$rowH} re S";
+                    $s[] = '0.91 0.92 0.94 RG 0.5 w';
+                    $s[] = "42 {$y} 511.28 {$rowH} re S";
 
                     $est = $mat->estudiante;
                     $doc = $est?->documento ?? '—';
-                    $nombre = $est ? ($est->apellidos.' '.$est->nombres) : '—';
+                    $nombre = $est ? trim($est->apellidos.' '.$est->nombres) : '—';
                     $correo = $est?->correo ?? '—';
                     $prog = $est?->programa ?? '—';
 
-                    $ty = $y + 7;
-                    $s[] = '0.15 0.15 0.18 rg';
-                    $s[] = "BT /F1 8.5 Tf 42 {$ty} Td (".self::win1252((string) $rowIndex).') Tj ET';
-                    $s[] = "BT /F2 8.5 Tf 64 {$ty} Td (".self::win1252(self::trunc($doc, 14)).') Tj ET';
-                    $s[] = "BT /F1 8.5 Tf 136 {$ty} Td (".self::win1252(self::trunc($nombre, 30)).') Tj ET';
-                    $s[] = "BT /F1 8 Tf 292 {$ty} Td (".self::win1252(self::trunc($correo, 28)).') Tj ET';
-                    $s[] = "BT /F1 8 Tf 422 {$ty} Td (".self::win1252(self::trunc($prog, 20)).') Tj ET';
+                    $ty = $y + 8;
+                    $s[] = '0.42 0.44 0.48 rg';
+                    $s[] = "BT /F1 8.5 Tf 50 {$ty} Td (".self::win1252(str_pad((string) $rowIndex, 2, '0', STR_PAD_LEFT)).') Tj ET';
 
-                    // Signature line inside cell
-                    $s[] = '0.78 0.79 0.82 RG 0.5 w';
-                    $lineY = $y + 5;
-                    $s[] = "510 {$lineY} m 553 {$lineY} l S";
+                    $s[] = '0.16 0.17 0.20 rg';
+                    $s[] = "BT /F2 8.5 Tf 80 {$ty} Td (".self::win1252(self::trunc($doc, 15)).') Tj ET';
+                    $s[] = "BT /F1 8.5 Tf 164 {$ty} Td (".self::win1252(self::trunc($nombre, 32)).') Tj ET';
+
+                    $s[] = '0.32 0.34 0.38 rg';
+                    $s[] = "BT /F1 8 Tf 326 {$ty} Td (".self::win1252(self::trunc($correo, 28)).') Tj ET';
+                    $s[] = "BT /F1 8 Tf 454 {$ty} Td (".self::win1252(self::trunc($prog, 20)).') Tj ET';
                 }
             }
 
-            // Footer signature and page number
-            $s[] = '0.75 0.76 0.79 RG 0.7 w';
-            $s[] = '36 86 m 220 86 l S';
-            $s[] = '0.25 0.25 0.30 rg';
-            $s[] = 'BT /F2 8.5 Tf 36 73 Td ('.self::win1252('Firma del Docente Titular').') Tj ET';
-            $s[] = '0.45 0.45 0.50 rg';
-            $s[] = 'BT /F1 8 Tf 36 61 Td ('.self::win1252($docenteNombre).') Tj ET';
+            // Clean Footer (no signature block)
+            $s[] = '0.89 0.90 0.92 RG 0.6 w';
+            $s[] = '42 56 m 553.28 56 l S';
+            $s[] = '0.48 0.50 0.54 rg';
+            $s[] = 'BT /F1 8 Tf 42 42 Td ('.self::win1252('Universidad del Tolima · Sistema de Registro Académico').') Tj ET';
 
             $numPag = $idxPagina + 1;
-            $s[] = 'BT /F1 8 Tf 390 61 Td ('.self::win1252("Universidad del Tolima · Página {$numPag} de {$totalPaginas}").') Tj ET';
+            $s[] = 'BT /F1 8 Tf 485 42 Td ('.self::win1252("Página {$numPag} de {$totalPaginas}").') Tj ET';
 
             $streams[] = implode("\n", $s);
         }
 
-        return self::armarPdf($streams);
+        return self::armarPdf($streams, $logoStream);
     }
 
-    private static function armarPdf(array $streams): string
+    private static function armarPdf(array $streams, ?string $logoStream): string
     {
         $objects = [];
         // 1: Catalog, 2: Pages, 3: Font Regular, 4: Font Bold
@@ -160,15 +192,24 @@ class CursoListaPdf
         $objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
         $objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
 
-        $kids = [];
         $nextId = 5;
+        $logoObjId = null;
+        if ($logoStream !== null) {
+            $logoObjId = $nextId++;
+            $logoLen = strlen($logoStream);
+            $objects[$logoObjId] = "<< /Type /XObject /Subtype /Image /Width 400 /Height 281 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length {$logoLen} >>\nstream\n{$logoStream}\nendstream";
+        }
+
+        $xObjRef = $logoObjId ? " /XObject << /Im1 {$logoObjId} 0 R >>" : '';
+
+        $kids = [];
         foreach ($streams as $stream) {
             $pageId = $nextId++;
             $contentId = $nextId++;
             $kids[] = "{$pageId} 0 R";
             $len = strlen($stream);
             $objects[$contentId] = "<< /Length {$len} >>\nstream\n{$stream}\nendstream";
-            $objects[$pageId] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents {$contentId} 0 R >>";
+            $objects[$pageId] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>{$xObjRef} >> /Contents {$contentId} 0 R >>";
         }
 
         $count = count($kids);

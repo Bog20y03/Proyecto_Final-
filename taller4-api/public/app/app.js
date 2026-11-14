@@ -497,26 +497,41 @@ function aceptarSesion(d) {
 async function iniciarIdentidad() {
   try {
     const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    const verifier = b64(crypto.getRandomValues(new Uint8Array(32)));
-    const challenge = b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
-    const d = await api('POST','/auth/oidc/inicio',{codeChallenge:challenge});
-    const flow={state:d.state,verifier,created:Date.now()};
-    sessionStorage.setItem('oidc',JSON.stringify(flow));
-    if (d.simulado) {
+    const nuevoFlujo = async () => {
+      const verifier = b64(crypto.getRandomValues(new Uint8Array(32)));
+      const challenge = b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
+      const d = await api('POST','/auth/oidc/inicio',{codeChallenge:challenge});
+      const f = {state:d.state,verifier,created:Date.now(),simulado:d.simulado,authorizationUrl:d.authorizationUrl};
+      sessionStorage.setItem('oidc',JSON.stringify(f));
+      return f;
+    };
+    let flow = await nuevoFlujo();
+    if (flow.simulado) {
       modal('Identidad simulada · desarrollo', [
         {id:'email',label:'Cuenta local usada para simular al proveedor',tipo:'email',valor:$('#email')?.value},
         {id:'password',label:'Contraseña de la cuenta local',tipo:'password'}
       ], 'Autenticar simulación', async v => {
-        const result=await api('POST','/auth/oidc/simulada',{...v,state:flow.state});
+        if (!flow || Date.now() - flow.created > 240000) flow = await nuevoFlujo();
+        let result;
+        try {
+          result = await api('POST','/auth/oidc/simulada',{...v,state:flow.state});
+        } catch (err) {
+          if (/vencido|inválido|código/i.test(err.message)) {
+            flow = await nuevoFlujo();
+            result = await api('POST','/auth/oidc/simulada',{...v,state:flow.state});
+          } else {
+            throw err;
+          }
+        }
         await completarIdentidad(result.code,flow);
       });
-    } else if (d.authorizationUrl && new URL(d.authorizationUrl).protocol === 'https:') location.assign(d.authorizationUrl);
+    } else if (flow.authorizationUrl && new URL(flow.authorizationUrl).protocol === 'https:') location.assign(flow.authorizationUrl);
     else throw new Error('El proveedor institucional no está configurado.');
   } catch(e) { aviso(e.message,false); }
 }
 
 async function completarIdentidad(code,flow) {
-  if (!flow || Date.now()-flow.created>300000) throw new Error('El inicio institucional venció. Vuelve a intentarlo.');
+  if (!flow || Date.now()-flow.created>1800000) throw new Error('El inicio institucional venció. Vuelve a intentarlo.');
   try { aceptarSesion(await api('POST','/auth/oidc/intercambio',{code,state:flow.state,codeVerifier:flow.verifier})); }
   finally { sessionStorage.removeItem('oidc'); }
 }

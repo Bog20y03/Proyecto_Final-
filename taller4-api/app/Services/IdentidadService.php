@@ -21,9 +21,9 @@ class IdentidadService
         $nonce = Str::random(64);
         $url = $this->proveedor->authorizationUrl($state, $nonce, $challenge);
         IdentityFlow::create(['state_hash' => hash('sha256', $state), 'driver' => config('integrations.identity.driver'),
-            'nonce' => $nonce, 'challenge' => $challenge, 'expires_at' => now()->addMinutes(5)]);
+            'nonce' => $nonce, 'challenge' => $challenge, 'expires_at' => now()->addMinutes(30)]);
 
-        return ['state' => $state, 'authorizationUrl' => $url, 'simulado' => config('integrations.identity.driver') === 'simulado', 'expiresIn' => 300];
+        return ['state' => $state, 'authorizationUrl' => $url, 'simulado' => config('integrations.identity.driver') === 'simulado', 'expiresIn' => 1800];
     }
 
     public function codigoSimulado(array $data): string
@@ -34,12 +34,12 @@ class IdentidadService
         abort_unless($user && Hash::check($data['password'], $user->password), 401, 'Credenciales inválidas');
 
         return DB::transaction(function () use ($data, $user) {
-            $flow = $this->flujo($data['state']);
-            abort_if($flow->code_hash, 400, 'Ya se emitió un código para este inicio de sesión');
+            $flow = IdentityFlow::where('state_hash', hash('sha256', $data['state']))->lockForUpdate()->first();
+            abort_unless($flow && ! $flow->used_at && $flow->driver === config('integrations.identity.driver'), 400, 'Inicio de sesión inválido o vencido');
             $subject = 'mock-user-'.$user->id;
             IdentidadExterna::firstOrCreate(['issuer' => IdentidadSimulada::ISSUER, 'subject' => $subject], ['user_id' => $user->id]);
             $code = Str::random(64);
-            $flow->update(['code_hash' => hash('sha256', $code), 'subject' => $subject]);
+            $flow->update(['code_hash' => hash('sha256', $code), 'subject' => $subject, 'expires_at' => now()->addMinutes(10)]);
 
             return $code;
         }, 3);
@@ -60,7 +60,7 @@ class IdentidadService
             $flow = $this->flujo($data['state']);
             $challenge = rtrim(strtr(base64_encode(hash('sha256', $data['codeVerifier'], true)), '+/', '-_'), '=');
             abort_unless(hash_equals($flow->challenge, $challenge), 400, 'Verificación PKCE no válida');
-            $flow->update(['used_at' => now()]); // Consume before calling the remote provider.
+            $flow->update(['used_at' => now(), 'expires_at' => $flow->expires_at]); // Consume before calling the remote provider.
 
             return $flow;
         }, 3);

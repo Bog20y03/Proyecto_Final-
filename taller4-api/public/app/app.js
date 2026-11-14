@@ -487,11 +487,19 @@ async function accionPago(id, accion, resultado) {
 
 async function historialPago(id) {
   const p = await api('GET', '/pagos/' + id);
-  $('#box').classList.remove('form-registro');
-  $('#box').innerHTML = `<h3>Historial de orden #${esc(p.id)}</h3><p>${esc(dinero(p.valor,p.moneda))} · ${esc(p.estado)}</p>
-    <p class="nota">${p.simulado ? 'Integración simulada; no representa un cobro bancario real.' : ''}</p>
-    ${(p.transacciones || []).map(t => `<p><b>${esc(t.accion)} · ${esc(t.estado)}</b><br>${esc(new Date(t.fecha).toLocaleString('es-CO'))}<br><small>${esc(t.referencia)}</small></p>`).join('') || '<p>La orden aún no tiene transacciones.</p>'}
-    <button class="b" id="cerrar-historia">Cerrar</button>`;
+  $('#box').classList.add('form-registro');
+  $('#box').innerHTML = `<div class="modal-encabezado"><span class="eyebrow">TRAZABILIDAD FINANCIERA · ${esc((p.proveedor || 'SOAP').toUpperCase())}</span><h3>Historial de orden #${esc(p.id)}</h3><p class="nota">Valor: <strong>${esc(dinero(p.valor,p.moneda))}</strong> · Estado actual: <span class="tag ${esc(p.estado)}">${esc(p.estado)}</span></p></div>
+    ${(p.transacciones || []).map(t => `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:14px;background:#fafafa">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+        <strong>${esc(t.accion)}</strong>
+        <span class="tag ${esc(t.estado)}">${esc(t.estado)}</span>
+      </div>
+      <div style="font-size:12px;color:#52525b;margin-bottom:8px">
+        Fecha: ${esc(new Date(t.fecha).toLocaleString('es-CO'))} · Referencia bancaria: <code>${esc(t.referencia)}</code>
+      </div>
+      ${t.soapXml ? `<details open style="margin-top:8px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--rojo-ut)">Mensaje XML SOAP 1.2 (WSDL / WS-Security)</summary><pre style="margin:8px 0 0;padding:12px;background:#1e1e24;color:#f4f4f5;border-radius:8px;font-size:11px;line-height:1.45;overflow-x:auto;font-family:Consolas,monospace">${esc(t.soapXml)}</pre></details>` : ''}
+    </div>`).join('') || '<p class="vacio" style="padding:20px">La orden aún no tiene transacciones procesadas.</p>'}
+    <div class="modal-acciones" style="display:flex;justify-content:flex-end"><button class="b" id="cerrar-historia">Cerrar</button></div>`;
   $('#modal').style.display = 'flex';
   $('#cerrar-historia').onclick = () => $('#modal').style.display = 'none';
 }

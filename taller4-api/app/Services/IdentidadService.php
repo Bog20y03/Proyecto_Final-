@@ -68,6 +68,17 @@ class IdentidadService
         $link = IdentidadExterna::with('user')->where('issuer', $identity['issuer'])->where('subject', $identity['subject'])->first();
         abort_unless($link?->user, 403, 'La identidad institucional no tiene una cuenta local vinculada');
 
+        $request = app()->bound('request') ? request() : null;
+        DB::table('audit_events')->insert([
+            'action' => 'auth.oidc_login',
+            'resource' => 'identidades_externas',
+            'resource_id' => $link->id,
+            'actor_id' => $link->user->id,
+            'correlation_id' => $request?->attributes->get('correlation_id'),
+            'properties' => json_encode(['issuer' => $identity['issuer'], 'rol' => $link->user->rol]),
+            'created_at' => now(),
+        ]);
+
         return $this->tokens->emitir($link->user);
     }
 }

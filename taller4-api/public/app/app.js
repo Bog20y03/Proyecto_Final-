@@ -65,7 +65,7 @@ $('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol 
 function vistaLogin() {
   $('#main').innerHTML = `
     <section class="bienvenida-login"><span class="eyebrow">PORTAL ACADÉMICO INSTITUCIONAL</span><h1>Tu gestión universitaria,<br>en un solo lugar.</h1><p>Plataforma integrada para estudiantes, docentes y administración académica de la Universidad del Tolima.</p>
-      <div class="login-servicios"><div><span>01</span><div><strong>Estudiantes</strong><p>Consulta la oferta de cursos, matricula tus asignaturas y realiza el seguimiento de tus pagos.</p></div></div><div><span>02</span><div><strong>Docentes</strong><p>Visualiza tus cursos asignados, cupos disponibles y el listado de estudiantes inscritos por periodo.</p></div></div><div><span>03</span><div><strong>Administración</strong><p>Gestiona el registro de usuarios, programación académica, recaudos y auditoría del sistema.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
+      <div class="login-servicios"><div><span>01</span><div><strong>Estudiantes</strong><p>Consulta la oferta de cursos, matricula tus asignaturas y realiza el seguimiento de tus pagos.</p></div></div><div><span>02</span><div><strong>Docentes</strong><p>Visualiza tus cursos asignados, cupos disponibles y el listado de estudiantes inscritos por periodo.</p></div></div><div><span>03</span><div><strong>Administración</strong><p>Gestiona el registro de usuarios, programación académica, recaudos y auditoría del sistema.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Sistema Integrado de Registro Académico · IDEAD</span></div></section>
     <div class="card login">
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro Académico</h2>
@@ -277,7 +277,23 @@ async function vistaEstudiantes() {
   $('#fq').onkeydown = e => e.key === 'Enter' && cargar();
   if (esAdmin) $('#nuevo').onclick = () => modal('Registrar estudiante', [
     { id: 'documento', label: 'Documento (será su contraseña inicial)' }, { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
-    { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'programa', label: 'Programa', valor: 'Ingeniería de Sistemas' },
+    { id: 'correo', label: 'Correo', tipo: 'email' },
+    { id: 'programa', label: 'Programa académico', valor: 'Ingeniería de Sistemas', opciones: [
+      ['Ingeniería de Sistemas', 'Ingeniería de Sistemas'],
+      ['Administración Financiera', 'Administración Financiera'],
+      ['Seguridad y Salud en el Trabajo', 'Seguridad y Salud en el Trabajo'],
+      ['Ingeniería Agroindustrial', 'Ingeniería Agroindustrial'],
+      ['Ingeniería Forestal', 'Ingeniería Forestal'],
+      ['Ingeniería Agronómica', 'Ingeniería Agronómica'],
+      ['Contaduría Pública', 'Contaduría Pública'],
+      ['Administración de Empresas', 'Administración de Empresas'],
+      ['Derecho', 'Derecho'],
+      ['Medicina', 'Medicina'],
+      ['Enfermería', 'Enfermería'],
+      ['Arquitectura', 'Arquitectura'],
+      ['Licenciatura en Ciencias Naturales', 'Licenciatura en Ciencias Naturales'],
+      ['Comunicación Social y Periodismo', 'Comunicación Social y Periodismo']
+    ] },
   ], 'Registrar estudiante', async (v) => { await api('POST', '/estudiantes', v); aviso('Estudiante registrado. Contraseña inicial: ' + v.documento); cargar(); });
   cargar();
 }
@@ -303,7 +319,17 @@ async function vistaDocentes() {
   $('#nuevo').onclick = () => modal('Nuevo docente', [
     { id: 'documento', label: 'Documento (será su contraseña inicial)' },
     { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
-    { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'departamento', label: 'Departamento', valor: 'Ingeniería de Sistemas' },
+    { id: 'correo', label: 'Correo', tipo: 'email' },
+    { id: 'departamento', label: 'Departamento / Facultad', valor: 'Ingeniería de Sistemas', opciones: [
+      ['Ingeniería de Sistemas', 'Ingeniería de Sistemas'],
+      ['Ciencias Económicas y Administrativas', 'Ciencias Económicas y Administrativas'],
+      ['Ciencias Básicas', 'Ciencias Básicas'],
+      ['Ciencias de la Educación', 'Ciencias de la Educación'],
+      ['Ciencias de la Salud', 'Ciencias de la Salud'],
+      ['Ciencias Agropecuarias y Forestales', 'Ciencias Agropecuarias y Forestales'],
+      ['Ciencias Sociales y Jurídicas', 'Ciencias Sociales y Jurídicas'],
+      ['Arquitectura y Diseño', 'Arquitectura y Diseño']
+    ] },
   ], 'Crear', async (v) => { await api('POST', '/docentes', v); aviso('Docente creado. Contraseña inicial: ' + (v.documento || 'password123')); cargar(); });
   cargar();
 }

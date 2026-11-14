@@ -68,7 +68,7 @@ function vistaLogin() {
       <div class="login-servicios"><div><span>01</span><div><strong>Registro estudiantil</strong><p>Información personal y académica organizada.</p></div></div><div><span>02</span><div><strong>Oferta y matrículas</strong><p>Cursos, docentes y asignaturas en un solo espacio.</p></div></div><div><span>03</span><div><strong>Seguimiento de pagos</strong><p>Consulta de órdenes e historial de transacciones.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
     <div class="card login">
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
-      <h2 class="login-titulo">Registro académico</h2>
+      <h2 class="login-titulo">Registro Académico</h2>
       <div class="login-campos">
         <div class="campo"><input id="email" type="email" placeholder="Correo institucional" aria-label="Correo institucional" autocomplete="username"></div>
         <div class="campo"><input id="pass" type="password" placeholder="Contraseña" aria-label="Contraseña" autocomplete="current-password"></div>
@@ -121,7 +121,7 @@ function pintar() {
     operacion:['Operación del sistema','Consulta los indicadores de la aplicación y la trazabilidad de sus cambios.']
   }[tab];
   $('#main').innerHTML = `<aside class="barra-lateral"><span class="nav-titulo">GESTIÓN ACADÉMICA</span><nav aria-label="Navegación principal">${tabs.map(([k, n]) => `<button data-t="${k}" class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${icono(k)}<span>${n}</span>${k === tab ? '<i></i>' : ''}</button>`).join('')}</nav><div class="lateral-pie"><span class="lateral-emblema">RA</span><strong>Información conectada</strong><p>Registro, formación y seguimiento académico.</p><small>Portal universitario</small></div></aside>
-    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
+    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro Académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
   document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; pintar(); });
   ({ cursos: vistaCursos, matriculas: vistaMatriculas, estudiantes: vistaEstudiantes, docentes: vistaDocentes, pagos: vistaPagos, notificaciones: vistaNotificaciones, operacion: vistaOperacion })[tab]();
 }

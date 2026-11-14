@@ -38,12 +38,14 @@ php artisan serve --host=127.0.0.1 --port=8000
 
 Abrir en el navegador: **http://127.0.0.1:8000/app/index.html**
 
-### Cuentas de demostración (contraseña: `password123`)
+### Cuentas de demostración
 
-| Rol | Correo | Capacidades principales |
-|---|---|---|
-| **ADMIN** | `admin@ut.edu.co` | Gestión de estudiantes, docentes, cursos, matrículas, reembolsos, métricas de rendimiento y auditoría. |
-| **DOCENTE** | `carlos.rojas@ut.edu.co` | Consulta de cursos asignados (`Mis cursos asignados`), catálogo general y estudiantes matriculados en sus cursos. |
-| **ESTUDIANTE** | `ana.martinez@ut.edu.co` | Consulta de oferta académica, inscripción/cancelación de matrículas, órdenes de pago y centro de avisos. |
+La contraseña inicial de los **Estudiantes** y **Docentes** es su **número de documento**; una vez dentro del portal, cualquier usuario puede actualizar su clave desde el botón **Cambiar contraseña** (`POST /api/v1/auth/password`).
+
+| Rol | Correo | Contraseña inicial (Documento) | Capacidades principales |
+|---|---|---|---|
+| **ADMIN** | `admin@ut.edu.co` | `password123` | Gestión de estudiantes, docentes, cursos, matrículas, reembolsos, métricas de rendimiento y auditoría. |
+| **DOCENTE** | `carlos.rojas@ut.edu.co` | `1000000002` | Consulta de cursos asignados (`Mis cursos asignados`), catálogo general y estudiantes matriculados en sus cursos. |
+| **ESTUDIANTE** | `ana.martinez@ut.edu.co` | `1000000001` | Consulta de oferta académica, inscripción/cancelación de matrículas, órdenes de pago y centro de avisos. |
 
 Para más detalles técnicos de la API y configuración de Mercado Pago, consulta [`taller4-api/README.md`](taller4-api/README.md) y [`taller4-api/MERCADO_PAGO.md`](taller4-api/MERCADO_PAGO.md).

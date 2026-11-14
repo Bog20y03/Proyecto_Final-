@@ -15,12 +15,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $docente = Docente::firstOrCreate(
+        $docente = Docente::updateOrCreate(
             ['correo' => 'carlos.rojas@ut.edu.co'],
-            ['nombres' => 'Carlos', 'apellidos' => 'Rojas', 'departamento' => 'Ingeniería de Sistemas']
+            ['documento' => '1000000002', 'nombres' => 'Carlos', 'apellidos' => 'Rojas', 'departamento' => 'Ingeniería de Sistemas']
         );
 
-        $estudiante = Estudiante::firstOrCreate(
+        $estudiante = Estudiante::updateOrCreate(
             ['documento' => '1000000001'],
             [
                 'nombres' => 'Ana',
@@ -35,12 +35,12 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::updateOrCreate(['email' => 'carlos.rojas@ut.edu.co'], [
-            'name' => 'Carlos Rojas', 'password' => 'password123', 'rol' => 'DOCENTE',
+            'name' => 'Carlos Rojas', 'password' => $docente->documento, 'rol' => 'DOCENTE',
             'docente_id' => $docente->id,
         ]);
 
         User::updateOrCreate(['email' => 'ana.martinez@ut.edu.co'], [
-            'name' => 'Ana Martínez', 'password' => 'password123', 'rol' => 'ESTUDIANTE',
+            'name' => 'Ana Martínez', 'password' => $estudiante->documento, 'rol' => 'ESTUDIANTE',
             'estudiante_id' => $estudiante->id,
         ]);
 

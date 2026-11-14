@@ -24,6 +24,7 @@ Route::prefix('v1')->group(function () {
 
     // Todo lo demás exige token válido
     Route::middleware(['jwt', 'throttle:api'])->group(function () {
+        Route::post('auth/password', [AuthController::class, 'cambiarPassword']);
         Route::get('notificaciones', [OperacionController::class, 'notificaciones']);
         Route::get('metricas', [OperacionController::class, 'metricas'])->middleware('role:ADMIN');
         Route::get('auditoria', [OperacionController::class, 'auditoria'])->middleware('role:ADMIN');

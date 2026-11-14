@@ -16,7 +16,7 @@ class EstudianteService
                 ['email' => $estudiante->correo],
                 [
                     'name' => trim($estudiante->nombres.' '.$estudiante->apellidos),
-                    'password' => $data['password'] ?? 'password123',
+                    'password' => (string) ($estudiante->documento ?: ($data['password'] ?? 'password123')),
                     'rol' => 'ESTUDIANTE',
                     'estudiante_id' => $estudiante->id,
                 ]

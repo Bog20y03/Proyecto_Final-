@@ -50,6 +50,16 @@ const lista = async (ruta) => (await api('GET', ruta)).data || [];
 function guardar() { sessionStorage.removeItem('sesion'); } // Access tokens remain in memory.
 function cerrar() { sesion = null; sessionStorage.removeItem('sesion'); pintar(); }
 $('#salir').onclick = cerrar;
+$('#cambiar-clave').onclick = () => modal('Cambiar contraseña', [
+  { id: 'passwordActual', label: 'Contraseña actual', tipo: 'password' },
+  { id: 'passwordNueva', label: 'Nueva contraseña (mínimo 6 caracteres)', tipo: 'password' },
+  { id: 'passwordConfirmacion', label: 'Confirmar nueva contraseña', tipo: 'password' },
+], 'Actualizar contraseña', async (v) => {
+  if (!v.passwordNueva || v.passwordNueva.length < 6) throw new Error('La nueva contraseña debe tener al menos 6 caracteres.');
+  if (v.passwordNueva !== v.passwordConfirmacion) throw new Error('La confirmación de la nueva contraseña no coincide.');
+  await api('POST', '/auth/password', v);
+  aviso('Contraseña actualizada correctamente');
+});
 $('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol === 'ADMIN' ? 'estudiantes' : 'cursos'; pintar(); } };
 
 function vistaLogin() {
@@ -69,12 +79,12 @@ function vistaLogin() {
       <button class="b gris" id="institucional">Acceso institucional</button>
       <div class="demo-label" style="display:${configuracion.simulatedEnabled ? 'block' : 'none'}">Cuentas de demostración</div>
       <div class="rapido" style="display:${configuracion.simulatedEnabled ? 'flex' : 'none'}">
-        <button class="b gris" data-u="admin@ut.edu.co">Admin</button>
-        <button class="b gris" data-u="carlos.rojas@ut.edu.co">Docente</button>
-        <button class="b gris" data-u="ana.martinez@ut.edu.co">Estudiante</button>
+        <button class="b gris" data-u="admin@ut.edu.co" data-p="password123">Admin</button>
+        <button class="b gris" data-u="carlos.rojas@ut.edu.co" data-p="1000000002">Docente</button>
+        <button class="b gris" data-u="ana.martinez@ut.edu.co" data-p="1000000001">Estudiante</button>
       </div>
     </div>`;
-  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { $('#email').value = b.dataset.u; $('#pass').value = 'password123'; });
+  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { $('#email').value = b.dataset.u; $('#pass').value = b.dataset.p || 'password123'; });
   const entrar = async () => {
     try {
       const d = await api('POST', '/auth/login', { email: $('#email').value.trim(), password: $('#pass').value });
@@ -91,6 +101,7 @@ function vistaLogin() {
 function pintar() {
   document.body.classList.toggle('autenticado', !!sesion);
   $('#salir').style.display = sesion ? '' : 'none';
+  $('#cambiar-clave').style.display = sesion ? '' : 'none';
   $('#quien').innerHTML = sesion ? `<span class="avatar-cuenta">${esc(sesion.nombre.charAt(0))}</span><span><strong>${esc(sesion.nombre)}</strong><small>${({ADMIN:'Administrador',DOCENTE:'Docente',ESTUDIANTE:'Estudiante'})[sesion.rol] || ''}</small></span>` : '';
   if (!sesion) return vistaLogin();
   const tabs = [];
@@ -265,9 +276,9 @@ async function vistaEstudiantes() {
   $('#buscar').onclick = () => cargar();
   $('#fq').onkeydown = e => e.key === 'Enter' && cargar();
   if (esAdmin) $('#nuevo').onclick = () => modal('Registrar estudiante', [
-    { id: 'documento', label: 'Documento' }, { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
+    { id: 'documento', label: 'Documento (será su contraseña inicial)' }, { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
     { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'programa', label: 'Programa', valor: 'Ingeniería de Sistemas' },
-  ], 'Registrar estudiante', async (v) => { await api('POST', '/estudiantes', v); aviso('Estudiante registrado correctamente'); cargar(); });
+  ], 'Registrar estudiante', async (v) => { await api('POST', '/estudiantes', v); aviso('Estudiante registrado. Contraseña inicial: ' + v.documento); cargar(); });
   cargar();
 }
 
@@ -279,8 +290,8 @@ async function vistaDocentes() {
     try {
       const datos = await paginaApi('/docentes', pagina); const ds = datos.data;
       $('#tabla').innerHTML = !ds.length ? '<div class="vacio">No hay docentes.</div>' : `<table>
-        <tr><th>#</th><th>Nombre</th><th>Correo</th><th>Departamento</th><th></th></tr>
-        ${ds.map(d => `<tr><td>${d.id}</td><td>${esc(d.nombres + ' ' + d.apellidos)}</td><td>${esc(d.correo)}</td><td>${esc(d.departamento)}</td>
+        <tr><th>#</th><th>Documento</th><th>Nombre</th><th>Correo</th><th>Departamento</th><th></th></tr>
+        ${ds.map(d => `<tr><td>${d.id}</td><td class="documento">${esc(d.documento || '—')}</td><td>${esc(d.nombres + ' ' + d.apellidos)}</td><td>${esc(d.correo)}</td><td>${esc(d.departamento)}</td>
         <td><button class="b rojo" data-del="${d.id}">Eliminar</button></td></tr>`).join('')}</table>`;
       paginador(datos, cargar);
       document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -290,9 +301,10 @@ async function vistaDocentes() {
     } catch (e) { $('#tabla').textContent = e.message; }
   };
   $('#nuevo').onclick = () => modal('Nuevo docente', [
+    { id: 'documento', label: 'Documento (será su contraseña inicial)' },
     { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
     { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'departamento', label: 'Departamento', valor: 'Ingeniería de Sistemas' },
-  ], 'Crear', async (v) => { await api('POST', '/docentes', v); aviso('Docente creado'); cargar(); });
+  ], 'Crear', async (v) => { await api('POST', '/docentes', v); aviso('Docente creado. Contraseña inicial: ' + (v.documento || 'password123')); cargar(); });
   cargar();
 }
 

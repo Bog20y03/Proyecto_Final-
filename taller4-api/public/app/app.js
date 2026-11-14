@@ -64,8 +64,8 @@ $('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol 
 
 function vistaLogin() {
   $('#main').innerHTML = `
-    <section class="bienvenida-login"><span class="eyebrow">SERVICIOS ACADÉMICOS</span><h1>La información de tus<br>estudiantes, organizada.</h1><p>Gestiona el registro de estudiantes y acompaña cada etapa de su proceso académico.</p>
-      <div class="login-servicios"><div><span>01</span><div><strong>Registro estudiantil</strong><p>Información personal y académica organizada.</p></div></div><div><span>02</span><div><strong>Oferta y matrículas</strong><p>Cursos, docentes y asignaturas en un solo espacio.</p></div></div><div><span>03</span><div><strong>Seguimiento de pagos</strong><p>Consulta de órdenes e historial de transacciones.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
+    <section class="bienvenida-login"><span class="eyebrow">PORTAL ACADÉMICO INSTITUCIONAL</span><h1>Tu gestión universitaria,<br>en un solo lugar.</h1><p>Plataforma integrada para estudiantes, docentes y administración académica de la Universidad del Tolima.</p>
+      <div class="login-servicios"><div><span>01</span><div><strong>Estudiantes</strong><p>Consulta la oferta de cursos, matricula tus asignaturas y realiza el seguimiento de tus pagos.</p></div></div><div><span>02</span><div><strong>Docentes</strong><p>Visualiza tus cursos asignados, cupos disponibles y el listado de estudiantes inscritos por periodo.</p></div></div><div><span>03</span><div><strong>Administración</strong><p>Gestiona el registro de usuarios, programación académica, recaudos y auditoría del sistema.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
     <div class="card login">
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro Académico</h2>

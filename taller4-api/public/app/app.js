@@ -137,9 +137,11 @@ function modal(titulo, campos, textoOk, alGuardar) {
 // ---------- Cursos ----------
 async function vistaCursos() {
   const esAdmin = sesion.rol === 'ADMIN';
+  const esDocente = sesion.rol === 'DOCENTE' && sesion.docenteId;
   $('#vista').innerHTML = `<div class="card">
-    <div class="der"><h2 style="margin:0">Cursos</h2>${esAdmin ? '<button class="b" id="nuevo">+ Nuevo curso</button>' : ''}</div>
+    <div class="der"><h2 style="margin:0">${esDocente ? 'Mis cursos y catálogo' : 'Cursos'}</h2>${esAdmin ? '<button class="b" id="nuevo">+ Nuevo curso</button>' : ''}</div>
     <div class="filtros">
+      ${esDocente ? `<div><label>Vista</label><select id="fd"><option value="${esc(sesion.docenteId)}">Mis cursos asignados</option><option value="">Todo el catálogo</option></select></div>` : ''}
       <div><label>Periodo</label><input id="fp" placeholder="2026-2"></div>
       <div><label>Estado</label><select id="fe"><option value="">Todos</option><option>ABIERTO</option><option>CERRADO</option></select></div>
       <div><label>Ordenar por</label><select id="fs"><option value="nombre,asc">Nombre (A-Z)</option><option value="nombre,desc">Nombre (Z-A)</option><option value="creditos,desc">Más créditos</option><option value="cupoDisponible,desc">Más cupos</option></select></div>
@@ -149,6 +151,7 @@ async function vistaCursos() {
     const q = new URLSearchParams({ limit: 100, sort: $('#fs').value });
     if ($('#fp').value) q.set('periodo', $('#fp').value.trim());
     if ($('#fe').value) q.set('estado', $('#fe').value);
+    if ($('#fd')?.value) q.set('docenteId', $('#fd').value);
     try {
       const [datos, misMats] = await Promise.all([
         paginaApi('/cursos?' + q, pagina),
@@ -177,6 +180,7 @@ async function vistaCursos() {
     } catch (e) { $('#tabla').textContent = e.message; }
   };
   $('#buscar').onclick = () => cargar();
+  if ($('#fd')) $('#fd').onchange = () => cargar();
   if (esAdmin) $('#nuevo').onclick = () => formCurso(null, cargar);
   cargar();
 }
@@ -423,21 +427,53 @@ async function historialPago(id) {
 }
 
 async function vistaNotificaciones(pagina = 1) {
-  $('#vista').innerHTML = '<div class="card"><h2>Avisos</h2><p class="nota">Los avisos se entregan mediante la cola de la aplicación.</p><div id="tabla">Cargando…</div></div>';
+  const etiquetas = {
+    'matricula.creada': ['Matrícula académica registrada', 'ACTIVA'],
+    'matricula.cancelada': ['Matrícula cancelada', 'CANCELADA'],
+    'pago.aprobado': ['Pago de matrícula aprobado', 'APROBADO'],
+    'pago.rechazado': ['Intento de pago rechazado', 'RECHAZADO'],
+    'pago.reembolsado': ['Reembolso de pago procesado', 'REEMBOLSADO'],
+  };
+  $('#vista').innerHTML = '<div class="card"><h2>Avisos</h2><p class="nota" style="margin-bottom:16px">Notificaciones generadas por tus procesos académicos y financieros.</p><div id="tabla" class="scroll">Cargando…</div></div>';
   try {
     const datos = await paginaApi('/notificaciones', pagina);
-    $('#tabla').innerHTML = datos.data.map(n => `<p><b>${esc(n.tipo)}</b> · recurso #${esc(n.resource_id)}<br><small>${esc(n.created_at)}</small></p>`).join('') || '<p class="vacio">Aún no hay avisos entregados.</p>';
+    $('#tabla').innerHTML = !datos.data.length ? '<p class="vacio">Aún no hay avisos entregados.</p>' : `<table>
+      <tr><th>Evento</th><th>Tipo</th><th>Referencia</th><th>Fecha</th></tr>
+      ${datos.data.map(n => {
+        const [titulo, tag] = etiquetas[n.tipo] || [n.tipo, 'ACTIVO'];
+        return `<tr><td><strong>${esc(titulo)}</strong></td><td><span class="tag ${esc(tag)}">${esc(n.tipo)}</span></td><td>Recurso #${esc(n.resource_id)}</td><td>${n.created_at ? esc(new Date(n.created_at).toLocaleString('es-CO')) : ''}</td></tr>`;
+      }).join('')}</table>`;
     paginador(datos,vistaNotificaciones);
   } catch(e) { if ($('#tabla')) $('#tabla').textContent=e.message; }
 }
 
 async function vistaOperacion() {
-  $('#vista').innerHTML='<div class="card"><h2>Operación y auditoría</h2><div id="tabla" class="scroll">Cargando…</div></div>';
+  $('#vista').innerHTML='<div id="tabla">Cargando…</div>';
   try {
     const [m,a] = await Promise.all([api('GET','/metricas'), api('GET','/auditoria?limit=20')]);
-    $('#tabla').innerHTML=`<p>Solicitudes: <b>${esc(m.solicitudes)}</b> · Errores 5xx: <b>${esc(m.errores5xx)}</b> · Promedio: <b>${esc(m.duracionPromedioMs)} ms</b></p>
-      <p class="nota">${esc(m.nota)} Se muestran los últimos 20 eventos administrativos.</p>
-      <table><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Recurso</th><th>Correlación</th></tr>${a.data.map(e => `<tr><td>${esc(e.created_at)}</td><td>${esc(e.actor_id ?? 'Sistema')}</td><td>${esc(e.action)}</td><td>${esc(e.resource)} #${esc(e.resource_id)}</td><td><small>${esc(e.correlation_id || '')}</small></td></tr>`).join('')}</table>`;
+    const rutas = m.porRuta || [];
+    $('#tabla').innerHTML=`
+      <div class="resumen" style="margin-bottom:20px">
+        <div class="card" style="margin-bottom:0;border-left:4px solid var(--rojo-ut)"><span class="nota">Solicitudes hoy</span><h2 style="font-size:28px;margin:6px 0 0">${esc(m.solicitudes)}</h2></div>
+        <div class="card" style="margin-bottom:0;border-left:4px solid ${m.errores5xx > 0 ? '#b91c1c' : '#1f7a4c'}"><span class="nota">Errores 5xx</span><h2 style="font-size:28px;margin:6px 0 0">${esc(m.errores5xx)}</h2></div>
+        <div class="card" style="margin-bottom:0;border-left:4px solid var(--rojo-ut)"><span class="nota">Latencia promedio</span><h2 style="font-size:28px;margin:6px 0 0">${esc(m.duracionPromedioMs)} ms</h2></div>
+        <div class="card" style="margin-bottom:0;border-left:4px solid var(--rojo-ut)"><span class="nota">Latencia máxima</span><h2 style="font-size:28px;margin:6px 0 0">${esc(m.duracionMaximaMs ?? 0)} ms</h2></div>
+      </div>
+      <div class="card">
+        <h2>Métricas de rendimiento por endpoint</h2>
+        <p class="nota" style="margin-bottom:16px">${esc(m.nota)}</p>
+        <div class="scroll">
+          ${!rutas.length ? '<p class="vacio">Sin métricas registradas hoy.</p>' : `<table><tr><th>Método</th><th>Ruta</th><th>Código HTTP</th><th>Solicitudes</th><th>Promedio (ms)</th><th>Máximo (ms)</th></tr>
+          ${rutas.map(r => `<tr><td><span class="tag ACTIVO">${esc(r.method)}</span></td><td><code>${esc(r.route)}</code></td><td><span class="tag ${r.status >= 400 ? 'RECHAZADO' : 'APROBADO'}">${esc(r.status)}</span></td><td>${esc(r.requests)}</td><td>${esc(r.requests ? Math.round((r.total_ms / r.requests) * 100) / 100 : 0)} ms</td><td>${esc(r.max_ms)} ms</td></tr>`).join('')}</table>`}
+        </div>
+      </div>
+      <div class="card">
+        <h2>Registro de auditoría</h2>
+        <p class="nota" style="margin-bottom:16px">Se muestran los últimos 20 eventos académicos y financieros con su identificador de correlación.</p>
+        <div class="scroll">
+          <table><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Recurso</th><th>Correlación</th></tr>${a.data.map(e => `<tr><td>${esc(e.created_at)}</td><td>${esc(e.actor_id ? 'Usuario #' + e.actor_id : 'Sistema')}</td><td><span class="tag ACTIVA">${esc(e.action)}</span></td><td>${esc(e.resource)} #${esc(e.resource_id)}</td><td><small>${esc(e.correlation_id || '')}</small></td></tr>`).join('')}</table>
+        </div>
+      </div>`;
   } catch(e) { if ($('#tabla')) $('#tabla').textContent=e.message; }
 }
 

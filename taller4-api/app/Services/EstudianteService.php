@@ -10,7 +10,20 @@ class EstudianteService
 {
     public function crear(array $data): Estudiante
     {
-        return DB::transaction(fn () => Estudiante::create($data)->refresh(), 3);
+        return DB::transaction(function () use ($data) {
+            $estudiante = Estudiante::create($data)->refresh();
+            User::firstOrCreate(
+                ['email' => $estudiante->correo],
+                [
+                    'name' => trim($estudiante->nombres.' '.$estudiante->apellidos),
+                    'password' => $data['password'] ?? 'password123',
+                    'rol' => 'ESTUDIANTE',
+                    'estudiante_id' => $estudiante->id,
+                ]
+            );
+
+            return $estudiante;
+        }, 3);
     }
 
     public function eliminar(Estudiante $estudiante): void

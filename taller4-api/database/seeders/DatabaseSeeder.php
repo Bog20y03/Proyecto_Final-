@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Curso;
 use App\Models\Docente;
 use App\Models\Estudiante;
 use App\Models\User;
@@ -42,5 +43,24 @@ class DatabaseSeeder extends Seeder
             'name' => 'Ana Martínez', 'password' => 'password123', 'rol' => 'ESTUDIANTE',
             'estudiante_id' => $estudiante->id,
         ]);
+
+        foreach ([
+            ['codigo' => 'ARQ-301', 'nombre' => 'Arquitectura de Software', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 35],
+            ['codigo' => 'IS-101', 'nombre' => 'Ingeniería de Software', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 30],
+            ['codigo' => 'BD-202', 'nombre' => 'Bases de Datos Avanzadas', 'creditos' => 4, 'periodo' => '2026-2', 'cupo_maximo' => 25],
+        ] as $curso) {
+            Curso::firstOrCreate(
+                ['codigo' => $curso['codigo']],
+                [
+                    'nombre' => $curso['nombre'],
+                    'creditos' => $curso['creditos'],
+                    'periodo' => $curso['periodo'],
+                    'cupo_maximo' => $curso['cupo_maximo'],
+                    'cupo_disponible' => $curso['cupo_maximo'],
+                    'estado' => 'ABIERTO',
+                    'docente_id' => $docente->id,
+                ]
+            );
+        }
     }
 }

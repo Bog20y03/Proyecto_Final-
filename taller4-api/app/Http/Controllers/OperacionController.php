@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\EntregarNotificacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +50,15 @@ class OperacionController extends Controller
     public function notificaciones(Request $request)
     {
         $filters = $request->validate(['limit' => ['sometimes', 'integer', 'between:1,100'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        $pendientes = DB::table('notification_outbox')
+            ->where('user_id', $request->user()->id)
+            ->whereNull('delivered_at')
+            ->orderBy('id')
+            ->limit(50)
+            ->pluck('id');
+        foreach ($pendientes as $outboxId) {
+            (new EntregarNotificacion((int) $outboxId))->handle();
+        }
 
         return response()->json(DB::table('notificaciones')->where('user_id', $request->user()->id)->orderByDesc('id')->paginate($filters['limit'] ?? 15));
     }

@@ -10,7 +10,20 @@ class DocenteService
 {
     public function crear(array $data): Docente
     {
-        return DB::transaction(fn () => Docente::create($data), 3);
+        return DB::transaction(function () use ($data) {
+            $docente = Docente::create($data);
+            User::firstOrCreate(
+                ['email' => $docente->correo],
+                [
+                    'name' => trim($docente->nombres.' '.$docente->apellidos),
+                    'password' => $data['password'] ?? 'password123',
+                    'rol' => 'DOCENTE',
+                    'docente_id' => $docente->id,
+                ]
+            );
+
+            return $docente;
+        }, 3);
     }
 
     public function eliminar(Docente $docente): void

@@ -64,8 +64,23 @@ $('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol 
 
 function vistaLogin() {
   $('#main').innerHTML = `
-    <section class="bienvenida-login"><span class="eyebrow">SERVICIOS ACADÉMICOS</span><h1>La información de tus<br>estudiantes, organizada.</h1><p>Gestiona el registro de estudiantes y acompaña cada etapa de su proceso académico.</p>
-      <div class="login-servicios"><div><span>01</span><div><strong>Registro estudiantil</strong><p>Información personal y académica organizada.</p></div></div><div><span>02</span><div><strong>Oferta y matrículas</strong><p>Cursos, docentes y asignaturas en un solo espacio.</p></div></div><div><span>03</span><div><strong>Seguimiento de pagos</strong><p>Consulta de órdenes e historial de transacciones.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
+    <section class="bienvenida-login">
+      <span class="eyebrow">PORTAL UNIVERSITARIO · PERFILES DE ACCESO</span>
+      <h1>Selecciona tu perfil e ingresa al portal.</h1>
+      <p>Gestiona el registro académico, la oferta de cursos, las matrículas y los pagos en línea según tu rol institucional.</p>
+      <div class="login-banners" role="group" aria-label="Perfiles del portal">
+        <button type="button" class="banner-rol" data-u="ana.martinez@ut.edu.co" data-p="1000000001" title="Perfil Estudiantes">
+          <img src="banner-estudiantes.png?v=1" alt="Estudiantes">
+        </button>
+        <button type="button" class="banner-rol" data-u="carlos.rojas@ut.edu.co" data-p="1000000002" title="Perfil Docentes">
+          <img src="banner-docentes.png?v=1" alt="Docentes">
+        </button>
+        <button type="button" class="banner-rol" data-u="admin@ut.edu.co" data-p="password123" title="Perfil Administrador">
+          <img src="banner-administrador.png?v=1" alt="Administrador">
+        </button>
+      </div>
+      <div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div>
+    </section>
     <div class="card login">
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro Académico</h2>
@@ -84,7 +99,14 @@ function vistaLogin() {
         <button class="b gris" data-u="ana.martinez@ut.edu.co" data-p="1000000001">Estudiante</button>
       </div>
     </div>`;
-  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { $('#email').value = b.dataset.u; $('#pass').value = b.dataset.p || 'password123'; });
+  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.banner-rol').forEach(x => x.classList.toggle('activo', x.dataset.u === b.dataset.u));
+    if (configuracion.simulatedEnabled) {
+      $('#email').value = b.dataset.u;
+      $('#pass').value = b.dataset.p || 'password123';
+    }
+    $('#email').focus();
+  });
   const entrar = async () => {
     try {
       const d = await api('POST', '/auth/login', { email: $('#email').value.trim(), password: $('#pass').value });
@@ -120,8 +142,13 @@ function pintar() {
     notificaciones:['Centro de avisos','Encuentra las novedades de tus procesos académicos.'],
     operacion:['Operación del sistema','Consulta los indicadores de la aplicación y la trazabilidad de sus cambios.']
   }[tab];
+  const bannerSeccion = tab === 'estudiantes' || sesion.rol === 'ESTUDIANTE'
+    ? ['banner-estudiantes.png?v=1', 'Estudiantes']
+    : (tab === 'docentes' || sesion.rol === 'DOCENTE'
+      ? ['banner-docentes.png?v=1', 'Docentes']
+      : ['banner-administrador.png?v=1', 'Administrador']);
   $('#main').innerHTML = `<aside class="barra-lateral"><span class="nav-titulo">GESTIÓN ACADÉMICA</span><nav aria-label="Navegación principal">${tabs.map(([k, n]) => `<button data-t="${k}" class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${icono(k)}<span>${n}</span>${k === tab ? '<i></i>' : ''}</button>`).join('')}</nav><div class="lateral-pie"><span class="lateral-emblema">RA</span><strong>Información conectada</strong><p>Registro, formación y seguimiento académico.</p><small>Portal universitario</small></div></aside>
-    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro Académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
+    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><div class="banner-encabezado"><img src="${bannerSeccion[0]}" alt="Módulo ${bannerSeccion[1]}"></div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro Académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
   document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; pintar(); });
   ({ cursos: vistaCursos, matriculas: vistaMatriculas, estudiantes: vistaEstudiantes, docentes: vistaDocentes, pagos: vistaPagos, notificaciones: vistaNotificaciones, operacion: vistaOperacion })[tab]();
 }

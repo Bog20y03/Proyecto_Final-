@@ -57,7 +57,7 @@ function vistaLogin() {
     <section class="bienvenida-login"><span class="eyebrow">SERVICIOS ACADÉMICOS</span><h1>La información de tus<br>estudiantes, organizada.</h1><p>Gestiona el registro de estudiantes y acompaña cada etapa de su proceso académico.</p>
       <div class="login-servicios"><div><span>01</span><div><strong>Registro estudiantil</strong><p>Información personal y académica organizada.</p></div></div><div><span>02</span><div><strong>Oferta y matrículas</strong><p>Cursos, docentes y asignaturas en un solo espacio.</p></div></div><div><span>03</span><div><strong>Seguimiento de pagos</strong><p>Consulta de órdenes e historial de transacciones.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
     <div class="card login">
-      <img class="login-logo" src="logo-ut.png" alt="Universidad del Tolima">
+      <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro académico</h2>
       <div class="login-campos">
         <div class="campo"><input id="email" type="email" placeholder="Correo institucional" aria-label="Correo institucional" autocomplete="username"></div>

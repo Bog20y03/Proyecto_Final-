@@ -171,17 +171,22 @@ async function vistaCursos() {
       const cursos = datos.data;
       const matriculados = new Set(misMats.filter(m => m.estado === 'ACTIVA' && m.curso).map(m => m.curso.id));
       $('#tabla').innerHTML = !cursos.length ? '<div class="vacio">No hay cursos con esos filtros.</div>' : `<table>
-        <tr><th>Código</th><th>Nombre</th><th>Créd.</th><th>Docente</th><th>Periodo</th><th>Cupos</th><th>Estado</th><th></th></tr>
-        ${cursos.map(c => `<tr><td>${esc(c.codigo)}</td><td>${esc(c.nombre)}</td><td>${c.creditos}</td>
+        <tr><th>Código</th><th>Nombre</th><th>Créd.</th><th>Docente</th><th>Periodo</th><th>Cupos</th><th>Estado</th><th>Acciones</th></tr>
+        ${cursos.map(c => {
+          const puedePdf = esAdmin || (esDocente && Number(c.docente?.id) === Number(sesion.docenteId));
+          return `<tr><td>${esc(c.codigo)}</td><td>${esc(c.nombre)}</td><td>${c.creditos}</td>
           <td>${c.docente ? esc(c.docente.nombres + ' ' + c.docente.apellidos) : ''}</td><td>${esc(c.periodo)}</td>
           <td>${c.cupoDisponible} / ${c.cupoMaximo}</td><td><span class="tag ${esc(c.estado)}">${esc(c.estado)}</span></td>
           <td style="white-space:nowrap">
             ${sesion.rol === 'ESTUDIANTE' && matriculados.has(c.id)
               ? '<span class="tag ACTIVA">Ya matriculado</span>'
               : (sesion.rol !== 'DOCENTE' ? `<button class="b" data-mat="${c.id}" data-per="${esc(c.periodo)}">Matricular</button>` : '')}
+            ${puedePdf ? `<button class="b gris" data-pdf="${c.id}" data-cod="${esc(c.codigo)}" data-per="${esc(c.periodo)}">Lista PDF</button>` : ''}
             ${esAdmin ? `<button class="b gris" data-ed="${c.id}">Editar</button> <button class="b rojo" data-del="${c.id}">Eliminar</button>` : ''}
-          </td></tr>`).join('')}</table>`;
+          </td></tr>`;
+        }).join('')}</table>`;
       document.querySelectorAll('[data-mat]').forEach(b => b.onclick = () => matricular(b.dataset.mat, b.dataset.per));
+      document.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => descargarListaPdf(b.dataset.pdf, b.dataset.cod, b.dataset.per, b));
       document.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => formCurso(cursos.find(c => c.id == b.dataset.ed), cargar));
       paginador(datos, cargar);
       document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -225,6 +230,33 @@ async function matricular(cursoId, periodo) {
     const ests = await lista('/estudiantes?limit=100');
     modal('Matricular estudiante', [{ id: 'est', label: 'Estudiante', opciones: ests.map(e => [e.id, `${e.nombres} ${e.apellidos} (${e.documento})`]) }],
       'Matricular', (v) => hacer(v.est));
+  }
+}
+
+async function descargarListaPdf(cursoId, codigo, periodo, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/cursos/${cursoId}/lista-pdf`, {
+      headers: { ...(sesion ? { 'Authorization': 'Bearer ' + sesion.token } : {}) }
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.message || 'No se pudo generar el PDF del curso');
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Lista_Estudiantes_${(codigo || cursoId)}_${(periodo || '2026-2')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    aviso('Lista de estudiantes descargada en PDF');
+  } catch (e) {
+    aviso(e.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

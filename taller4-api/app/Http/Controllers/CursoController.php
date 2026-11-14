@@ -8,8 +8,11 @@ use App\Http\Resources\CursoResource;
 use App\Models\Curso;
 use App\Services\CursoService;
 use App\Support\CursoCache;
+use App\Support\CursoListaPdf;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class CursoController extends Controller
 {
@@ -66,5 +69,41 @@ class CursoController extends Controller
         $service->eliminar($curso);
 
         return response()->noContent();
+    }
+
+    // GET /api/v1/cursos/{curso}/lista-pdf
+    public function listaPdf(Request $request, Curso $curso)
+    {
+        $user = $request->user();
+        if ($user->rol === 'DOCENTE' && (int) $user->docente_id !== (int) $curso->docente_id) {
+            abort(403, 'Solo puedes descargar la lista de tus cursos asignados');
+        }
+
+        $curso->load('docente');
+        $matriculas = $curso->matriculas()
+            ->with('estudiante')
+            ->where('estado', 'ACTIVA')
+            ->get()
+            ->sortBy(fn ($m) => ($m->estudiante?->apellidos ?? '').' '.($m->estudiante?->nombres ?? ''))
+            ->values();
+
+        $pdf = CursoListaPdf::generar($curso, $matriculas);
+        $filename = 'Lista_Estudiantes_'.preg_replace('/[^A-Za-z0-9_-]/', '_', $curso->codigo.'_'.$curso->periodo).'.pdf';
+
+        DB::table('audit_events')->insert([
+            'action' => 'cursos.lista_pdf_descargada',
+            'resource' => 'cursos',
+            'resource_id' => $curso->id,
+            'actor_id' => $user->id,
+            'correlation_id' => $request->attributes->get('correlation_id'),
+            'properties' => json_encode(['inscritos' => $matriculas->count()]),
+            'created_at' => now(),
+        ]);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => strlen($pdf),
+        ]);
     }
 }

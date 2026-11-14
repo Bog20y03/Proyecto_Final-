@@ -53,6 +53,7 @@ Route::prefix('v1')->group(function () {
         // Cursos
         Route::get('cursos', [CursoController::class, 'index']);
         Route::get('cursos/{curso}', [CursoController::class, 'show']);
+        Route::get('cursos/{curso}/lista-pdf', [CursoController::class, 'listaPdf'])->middleware('role:ADMIN,DOCENTE');
         Route::post('cursos', [CursoController::class, 'store'])->middleware('role:ADMIN');
         Route::put('cursos/{curso}', [CursoController::class, 'update'])->middleware('role:ADMIN');
         Route::patch('cursos/{curso}', [CursoController::class, 'patch'])->middleware('role:ADMIN');

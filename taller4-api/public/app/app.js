@@ -65,7 +65,7 @@ $('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol 
 function vistaLogin() {
   $('#main').innerHTML = `
     <section class="bienvenida-login"><span class="eyebrow">PORTAL ACADÉMICO INSTITUCIONAL</span><h1>Tu gestión universitaria,<br>en un solo lugar.</h1><p>Plataforma integrada para estudiantes, docentes y administración académica de la Universidad del Tolima.</p>
-      <div class="login-servicios"><div><span>01</span><div><strong>Estudiantes</strong><p>Consulta la oferta de cursos, matricula tus asignaturas y realiza el seguimiento de tus pagos.</p></div></div><div><span>02</span><div><strong>Docentes</strong><p>Visualiza tus cursos asignados, cupos disponibles y el listado de estudiantes inscritos por periodo.</p></div></div><div><span>03</span><div><strong>Administración</strong><p>Gestiona el registro de usuarios, programación académica, recaudos y auditoría del sistema.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
+      <div class="login-servicios"><div><span>01</span><div><strong>Estudiantes</strong><p>Consulta la oferta de cursos, matricula tus asignaturas y realiza el seguimiento de tus pagos.</p></div></div><div><span>02</span><div><strong>Docentes</strong><p>Visualiza tus cursos asignados, cupos disponibles y el listado de estudiantes inscritos por periodo.</p></div></div><div><span>03</span><div><strong>Administración</strong><p>Gestiona el registro de usuarios, programación académica, recaudos y auditoría del sistema.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Sistema Integrado de Registro Académico · IDEAD</span></div></section>
     <div class="card login">
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro Académico</h2>
@@ -171,17 +171,22 @@ async function vistaCursos() {
       const cursos = datos.data;
       const matriculados = new Set(misMats.filter(m => m.estado === 'ACTIVA' && m.curso).map(m => m.curso.id));
       $('#tabla').innerHTML = !cursos.length ? '<div class="vacio">No hay cursos con esos filtros.</div>' : `<table>
-        <tr><th>Código</th><th>Nombre</th><th>Créd.</th><th>Docente</th><th>Periodo</th><th>Cupos</th><th>Estado</th><th></th></tr>
-        ${cursos.map(c => `<tr><td>${esc(c.codigo)}</td><td>${esc(c.nombre)}</td><td>${c.creditos}</td>
+        <tr><th>Código</th><th>Nombre</th><th>Créd.</th><th>Docente</th><th>Periodo</th><th>Cupos</th><th>Estado</th><th>Acciones</th></tr>
+        ${cursos.map(c => {
+          const puedePdf = esAdmin || (esDocente && Number(c.docente?.id) === Number(sesion.docenteId));
+          return `<tr><td>${esc(c.codigo)}</td><td>${esc(c.nombre)}</td><td>${c.creditos}</td>
           <td>${c.docente ? esc(c.docente.nombres + ' ' + c.docente.apellidos) : ''}</td><td>${esc(c.periodo)}</td>
           <td>${c.cupoDisponible} / ${c.cupoMaximo}</td><td><span class="tag ${esc(c.estado)}">${esc(c.estado)}</span></td>
           <td style="white-space:nowrap">
             ${sesion.rol === 'ESTUDIANTE' && matriculados.has(c.id)
               ? '<span class="tag ACTIVA">Ya matriculado</span>'
               : (sesion.rol !== 'DOCENTE' ? `<button class="b" data-mat="${c.id}" data-per="${esc(c.periodo)}">Matricular</button>` : '')}
+            ${puedePdf ? `<button class="b gris" data-pdf="${c.id}" data-cod="${esc(c.codigo)}" data-per="${esc(c.periodo)}">Lista PDF</button>` : ''}
             ${esAdmin ? `<button class="b gris" data-ed="${c.id}">Editar</button> <button class="b rojo" data-del="${c.id}">Eliminar</button>` : ''}
-          </td></tr>`).join('')}</table>`;
+          </td></tr>`;
+        }).join('')}</table>`;
       document.querySelectorAll('[data-mat]').forEach(b => b.onclick = () => matricular(b.dataset.mat, b.dataset.per));
+      document.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => descargarListaPdf(b.dataset.pdf, b.dataset.cod, b.dataset.per, b));
       document.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => formCurso(cursos.find(c => c.id == b.dataset.ed), cargar));
       paginador(datos, cargar);
       document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -227,6 +232,33 @@ async function matricular(cursoId, periodo) {
     const ests = await lista('/estudiantes?limit=100');
     modal('Matricular estudiante', [{ id: 'est', label: 'Estudiante', opciones: ests.map(e => [e.id, `${e.nombres} ${e.apellidos} (${e.documento})`]) }],
       'Matricular', (v) => hacer(v.est));
+  }
+}
+
+async function descargarListaPdf(cursoId, codigo, periodo, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/cursos/${cursoId}/lista-pdf`, {
+      headers: { ...(sesion ? { 'Authorization': 'Bearer ' + sesion.token } : {}) }
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.message || 'No se pudo generar el PDF del curso');
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Lista_Estudiantes_${(codigo || cursoId)}_${(periodo || '2026-2')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    aviso('Lista de estudiantes descargada en PDF');
+  } catch (e) {
+    aviso(e.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -279,7 +311,23 @@ async function vistaEstudiantes() {
   $('#fq').onkeydown = e => e.key === 'Enter' && cargar();
   if (esAdmin) $('#nuevo').onclick = () => modal('Registrar estudiante', [
     { id: 'documento', label: 'Documento (será su contraseña inicial)' }, { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
-    { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'programa', label: 'Programa', valor: 'Ingeniería de Sistemas' },
+    { id: 'correo', label: 'Correo', tipo: 'email' },
+    { id: 'programa', label: 'Programa académico', valor: 'Ingeniería de Sistemas', opciones: [
+      ['Ingeniería de Sistemas', 'Ingeniería de Sistemas'],
+      ['Administración Financiera', 'Administración Financiera'],
+      ['Seguridad y Salud en el Trabajo', 'Seguridad y Salud en el Trabajo'],
+      ['Ingeniería Agroindustrial', 'Ingeniería Agroindustrial'],
+      ['Ingeniería Forestal', 'Ingeniería Forestal'],
+      ['Ingeniería Agronómica', 'Ingeniería Agronómica'],
+      ['Contaduría Pública', 'Contaduría Pública'],
+      ['Administración de Empresas', 'Administración de Empresas'],
+      ['Derecho', 'Derecho'],
+      ['Medicina', 'Medicina'],
+      ['Enfermería', 'Enfermería'],
+      ['Arquitectura', 'Arquitectura'],
+      ['Licenciatura en Ciencias Naturales', 'Licenciatura en Ciencias Naturales'],
+      ['Comunicación Social y Periodismo', 'Comunicación Social y Periodismo']
+    ] },
   ], 'Registrar estudiante', async (v) => { await api('POST', '/estudiantes', v); aviso('Estudiante registrado. Contraseña inicial: ' + v.documento); cargar(); });
   cargar();
 }
@@ -305,7 +353,17 @@ async function vistaDocentes() {
   $('#nuevo').onclick = () => modal('Nuevo docente', [
     { id: 'documento', label: 'Documento (será su contraseña inicial)' },
     { id: 'nombres', label: 'Nombres' }, { id: 'apellidos', label: 'Apellidos' },
-    { id: 'correo', label: 'Correo', tipo: 'email' }, { id: 'departamento', label: 'Departamento', valor: 'Ingeniería de Sistemas' },
+    { id: 'correo', label: 'Correo', tipo: 'email' },
+    { id: 'departamento', label: 'Departamento / Facultad', valor: 'Ingeniería de Sistemas', opciones: [
+      ['Ingeniería de Sistemas', 'Ingeniería de Sistemas'],
+      ['Ciencias Económicas y Administrativas', 'Ciencias Económicas y Administrativas'],
+      ['Ciencias Básicas', 'Ciencias Básicas'],
+      ['Ciencias de la Educación', 'Ciencias de la Educación'],
+      ['Ciencias de la Salud', 'Ciencias de la Salud'],
+      ['Ciencias Agropecuarias y Forestales', 'Ciencias Agropecuarias y Forestales'],
+      ['Ciencias Sociales y Jurídicas', 'Ciencias Sociales y Jurídicas'],
+      ['Arquitectura y Diseño', 'Arquitectura y Diseño']
+    ] },
   ], 'Crear', async (v) => { await api('POST', '/docentes', v); aviso('Docente creado. Contraseña inicial: ' + (v.documento || 'password123')); cargar(); });
   cargar();
 }
@@ -423,11 +481,19 @@ async function abrirCheckoutBrick(pago, alFinalizar) {
 
 async function historialPago(id) {
   const p = await api('GET', '/pagos/' + id);
-  $('#box').classList.remove('form-registro');
-  $('#box').innerHTML = `<h3>Historial de orden #${esc(p.id)}</h3><p>${esc(dinero(p.valor,p.moneda))} · ${esc(p.estado)}</p>
-    <p class="nota">${p.simulado ? 'Integración simulada; no representa un cobro bancario real.' : ''}</p>
-    ${(p.transacciones || []).map(t => `<p><b>${esc(t.accion)} · ${esc(t.estado)}</b><br>${esc(new Date(t.fecha).toLocaleString('es-CO'))}<br><small>${esc(t.referencia)}</small></p>`).join('') || '<p>La orden aún no tiene transacciones.</p>'}
-    <button class="b" id="cerrar-historia">Cerrar</button>`;
+  $('#box').classList.add('form-registro');
+  $('#box').innerHTML = `<div class="modal-encabezado"><span class="eyebrow">TRAZABILIDAD FINANCIERA · ${esc((p.proveedor || 'SOAP').toUpperCase())}</span><h3>Historial de orden #${esc(p.id)}</h3><p class="nota">Valor: <strong>${esc(dinero(p.valor,p.moneda))}</strong> · Estado actual: <span class="tag ${esc(p.estado)}">${esc(p.estado)}</span></p></div>
+    ${(p.transacciones || []).map(t => `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:14px;background:#fafafa">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+        <strong>${esc(t.accion)}</strong>
+        <span class="tag ${esc(t.estado)}">${esc(t.estado)}</span>
+      </div>
+      <div style="font-size:12px;color:#52525b;margin-bottom:8px">
+        Fecha: ${esc(new Date(t.fecha).toLocaleString('es-CO'))} · Referencia bancaria: <code>${esc(t.referencia)}</code>
+      </div>
+      ${t.soapXml ? `<details open style="margin-top:8px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--rojo-ut)">Mensaje XML SOAP 1.2 (WSDL / WS-Security)</summary><pre style="margin:8px 0 0;padding:12px;background:#1e1e24;color:#f4f4f5;border-radius:8px;font-size:11px;line-height:1.45;overflow-x:auto;font-family:Consolas,monospace">${esc(t.soapXml)}</pre></details>` : ''}
+    </div>`).join('') || '<p class="vacio" style="padding:20px">La orden aún no tiene transacciones procesadas.</p>'}
+    <div class="modal-acciones" style="display:flex;justify-content:flex-end"><button class="b" id="cerrar-historia">Cerrar</button></div>`;
   $('#modal').style.display = 'flex';
   $('#cerrar-historia').onclick = () => $('#modal').style.display = 'none';
 }

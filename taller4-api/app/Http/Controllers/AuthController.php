@@ -23,6 +23,16 @@ class AuthController extends Controller
             abort(401, 'Credenciales inválidas');
         }
 
+        DB::table('audit_events')->insert([
+            'action' => 'auth.login_local',
+            'resource' => 'users',
+            'resource_id' => $user->id,
+            'actor_id' => $user->id,
+            'correlation_id' => $request->attributes->get('correlation_id'),
+            'properties' => json_encode(['rol' => $user->rol]),
+            'created_at' => now(),
+        ]);
+
         return response()->json($tokens->emitir($user));
     }
 

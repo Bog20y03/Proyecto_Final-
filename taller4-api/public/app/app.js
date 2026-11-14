@@ -217,7 +217,9 @@ async function formCurso(c, recargar) {
 async function matricular(cursoId, periodo) {
   const hacer = async (estudianteId) => {
     await api('POST', '/matriculas', { estudianteId: +estudianteId, cursoId: +cursoId, periodo });
-    aviso('Matrícula realizada'); pintar();
+    aviso('Matrícula realizada');
+    if (sesion.rol === 'ESTUDIANTE') tab = 'matriculas';
+    pintar();
   };
   if (sesion.rol === 'ESTUDIANTE') {
     try { await hacer(sesion.estudianteId); } catch (e) { aviso(e.message, false); }
@@ -332,7 +334,7 @@ const dinero = (valor, moneda) => new Intl.NumberFormat('es-CO', {style: 'curren
 
 async function vistaPagos(pagina = 1, estado = '') {
   $('#vista').innerHTML = `<div class="card"><h2>Pagos de matrículas</h2>
-    <p class="nota">${configuracion.paymentsDriver === 'mercadopago' ? (configuracion.mercadoPagoTestMode ? 'Mercado Pago · entorno de pruebas. Usa exclusivamente la cuenta compradora y las tarjetas de prueba.' : 'El pago se realiza en el checkout de Mercado Pago.') : configuracion.simulatedEnabled ? 'Demostración: no se cobran fondos reales. La tarifa es de ejemplo y se calcula en el servidor.' : 'Consulta de órdenes y estado financiero.'} Una matrícula ACTIVA no implica pago aprobado.</p>
+    <p class="nota">${configuracion.mercadoPagoTestMode ? 'Mercado Pago · entorno de pruebas. Usa exclusivamente la cuenta compradora y las tarjetas de prueba.' : 'El pago se realiza en el checkout de Mercado Pago.'} Una matrícula ACTIVA no implica pago aprobado.</p>
     <div class="filtros"><div><label for="pestado">Estado</label><select id="pestado"><option value="">Todos</option>${['PENDIENTE','APROBADO','RECHAZADO','REEMBOLSADO'].map(x => `<option ${x === estado ? 'selected' : ''}>${x}</option>`).join('')}</select></div><button class="b" id="pfiltrar">Filtrar</button></div>
     <p class="nota">Para generar una orden, abre Matrículas y selecciona Generar orden.</p><div id="tabla" class="scroll">Cargando…</div></div>`;
   $('#pfiltrar').onclick = () => vistaPagos(1, $('#pestado').value);
@@ -343,9 +345,7 @@ async function vistaPagos(pagina = 1, estado = '') {
       <td><span class="tag ${esc(p.estado)}">${esc(p.estado)}</span></td><td>${esc(p.proveedor)}${p.simulado ? ' (simulación)' : ''}</td>
       <td><button class="b gris" data-historia="${p.id}">Historial</button>
       ${p.requiereRevision ? '<span class="tag PENDIENTE">Revisión administrativa</span>' : ''}
-      ${p.proveedor === 'mercadopago' ? `${p.matricula?.estado === 'ACTIVA' && p.estado === 'PENDIENTE' && !p.requiereRevision ? `<button class="b" data-mp="${p.id}">Pagar con Mercado Pago</button>` : ''} <button class="b gris" data-sync="${p.id}">Consultar estado</button>` : ''}
-      ${p.simulado && configuracion.simulatedEnabled && p.matricula?.estado === 'ACTIVA' && ['PENDIENTE','RECHAZADO'].includes(p.estado) ? `<button class="b" data-pagar="${p.id}">Simular pago</button>` : ''}
-      ${p.simulado && configuracion.simulatedEnabled && sesion.rol === 'ADMIN' && p.estado === 'APROBADO' ? `<button class="b rojo" data-reembolso="${p.id}">Reembolsar</button>` : ''}</td></tr>`).join('')}</table>`;
+      ${p.proveedor === 'mercadopago' ? `${p.matricula?.estado === 'ACTIVA' && p.estado === 'PENDIENTE' && !p.requiereRevision ? `<button class="b" data-mp="${p.id}">Pagar con Mercado Pago</button>` : ''} <button class="b gris" data-sync="${p.id}">Consultar estado</button>` : ''}</td></tr>`).join('')}</table>`;
     paginador(datos, p => vistaPagos(p, estado));
     document.querySelectorAll('[data-mp]').forEach(b => b.onclick = () => {
       const pago = datos.data.find(x => String(x.id) === b.dataset.mp);
@@ -357,17 +357,6 @@ async function vistaPagos(pagina = 1, estado = '') {
       catch(e) { aviso(e.message,false); b.disabled=false; }
     });
     document.querySelectorAll('[data-historia]').forEach(b => b.onclick = () => historialPago(b.dataset.historia).catch(e => aviso(e.message, false)));
-    document.querySelectorAll('[data-pagar]').forEach(b => b.onclick = () => modal('Pago simulado · sin cobro real', [
-      { id:'resultado', label:'Resultado de demostración', opciones:[['APROBADO','Aprobar'],['RECHAZADO','Rechazar'],['ERROR','Simular indisponibilidad']] }
-    ], 'Simular', async v => {
-      await accionPago(b.dataset.pagar, 'procesar', v.resultado); aviso('Resultado de simulación registrado'); vistaPagos(pagina,estado);
-    }));
-    document.querySelectorAll('[data-reembolso]').forEach(b => b.onclick = async () => {
-      if (!confirm('¿Registrar un reembolso simulado de esta orden?')) return;
-      b.disabled = true;
-      try { await accionPago(b.dataset.reembolso, 'reembolsar'); aviso('Reembolso simulado registrado'); vistaPagos(pagina,estado); }
-      catch(e) { aviso(e.message,false); b.disabled=false; }
-    });
   } catch(e) { if ($('#tabla')) $('#tabla').textContent=e.message; }
 }
 
@@ -397,7 +386,20 @@ async function abrirCheckoutBrick(pago, alFinalizar) {
     const mp = new window.MercadoPago(configuracion.mercadoPagoPublicKey, { locale: 'es-CO' });
     window.mpCardBrickController = await mp.bricks().create('cardPayment', 'mp-brick-container', {
       initialization: { amount: Number(pago.valor) },
-      customization: { visual: { style: { theme: 'default' } }, paymentMethods: { maxInstallments: 12 } },
+      customization: {
+        visual: {
+          style: {
+            theme: 'default',
+            customVariables: {
+              baseColor: '#ef2b2d',
+              baseColorFirstVariant: '#d61f24',
+              baseColorSecondVariant: '#c81e24',
+              buttonTextColor: '#ffffff',
+            },
+          },
+        },
+        paymentMethods: { maxInstallments: 12 },
+      },
       callbacks: {
         onReady: () => {},
         onSubmit: async (cardFormData) => {
@@ -417,14 +419,6 @@ async function abrirCheckoutBrick(pago, alFinalizar) {
     await cerrarBrick();
     aviso(e.message || 'Error iniciando Checkout Brick', false);
   }
-}
-
-async function accionPago(id, accion, resultado) {
-  const intento = `${id}:${accion}:${resultado || ''}`;
-  if (!idempotencias.has(intento)) idempotencias.set(intento, crypto.randomUUID());
-  const r = await api('POST', `/pagos/${id}/${accion}`, resultado ? {resultado} : {}, { 'Idempotency-Key':idempotencias.get(intento) });
-  idempotencias.delete(intento);
-  return r;
 }
 
 async function historialPago(id) {

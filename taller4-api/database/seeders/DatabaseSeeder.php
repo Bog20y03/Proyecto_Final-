@@ -48,6 +48,15 @@ class DatabaseSeeder extends Seeder
             ['codigo' => 'ARQ-301', 'nombre' => 'Arquitectura de Software', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 35],
             ['codigo' => 'IS-101', 'nombre' => 'Ingeniería de Software', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 30],
             ['codigo' => 'BD-202', 'nombre' => 'Bases de Datos Avanzadas', 'creditos' => 4, 'periodo' => '2026-2', 'cupo_maximo' => 25],
+            ['codigo' => 'ED-201', 'nombre' => 'Estructuras de Datos y Algoritmos', 'creditos' => 4, 'periodo' => '2026-2', 'cupo_maximo' => 30],
+            ['codigo' => 'SO-302', 'nombre' => 'Sistemas Operativos', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 30],
+            ['codigo' => 'RD-303', 'nombre' => 'Redes de Computadores', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 28],
+            ['codigo' => 'DW-304', 'nombre' => 'Desarrollo Web Full Stack', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 32],
+            ['codigo' => 'SD-401', 'nombre' => 'Sistemas Distribuidos', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 25],
+            ['codigo' => 'SI-402', 'nombre' => 'Seguridad de la Información', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 25],
+            ['codigo' => 'IA-403', 'nombre' => 'Inteligencia Artificial', 'creditos' => 4, 'periodo' => '2026-2', 'cupo_maximo' => 28],
+            ['codigo' => 'CC-404', 'nombre' => 'Computación en la Nube y DevOps', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 30],
+            ['codigo' => 'PS-405', 'nombre' => 'Pruebas y Calidad de Software', 'creditos' => 3, 'periodo' => '2026-2', 'cupo_maximo' => 25],
         ] as $curso) {
             Curso::firstOrCreate(
                 ['codigo' => $curso['codigo']],

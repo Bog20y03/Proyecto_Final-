@@ -3,7 +3,6 @@ const API = '/api/v1';
 let configuracion = { simulatedEnabled: false };
 let idempotencias = new Map();
 let sesion = null;           // { token, rol, nombre, estudianteId, docenteId }
-let rolPortal = null;        // null = pantalla de bienvenida con banners | 'ESTUDIANTE' | 'DOCENTE' | 'ADMIN'
 let tab = 'cursos';
 
 const $ = (s) => document.querySelector(s);
@@ -49,7 +48,7 @@ const lista = async (ruta) => (await api('GET', ruta)).data || [];
 
 // ---------- Sesión ----------
 function guardar() { sessionStorage.removeItem('sesion'); } // Access tokens remain in memory.
-function cerrar() { sesion = null; rolPortal = null; sessionStorage.removeItem('sesion'); pintar(); }
+function cerrar() { sesion = null; sessionStorage.removeItem('sesion'); pintar(); }
 $('#salir').onclick = cerrar;
 $('#cambiar-clave').onclick = () => modal('Cambiar contraseña', [
   { id: 'passwordActual', label: 'Contraseña actual', tipo: 'password' },
@@ -61,55 +60,13 @@ $('#cambiar-clave').onclick = () => modal('Cambiar contraseña', [
   await api('POST', '/auth/password', v);
   aviso('Contraseña actualizada correctamente');
 });
-$('.marca').onclick = e => {
-  e.preventDefault();
-  if (sesion) { tab = sesion.rol === 'ADMIN' ? 'estudiantes' : 'cursos'; pintar(); }
-  else { rolPortal = null; pintar(); }
-};
-
-function vistaBienvenida() {
-  document.body.classList.add('modo-bienvenida');
-  $('#main').innerHTML = `
-    <section class="portal-bienvenida">
-      <div class="portal-bienvenida-encabezado">
-        <span class="eyebrow">UNIVERSIDAD DEL TOLIMA · PORTAL ACADÉMICO</span>
-        <h1>Bienvenido a Registro Académico</h1>
-        <p>Selecciona tu perfil institucional para ingresar a la plataforma.</p>
-      </div>
-      <div class="portal-banners" role="group" aria-label="Selecciona tu perfil institucional">
-        <button type="button" class="portal-banner-btn" data-rol="ESTUDIANTE">
-          <img src="banner-estudiantes.png?v=1" alt="Ingresar como Estudiantes">
-        </button>
-        <button type="button" class="portal-banner-btn" data-rol="DOCENTE">
-          <img src="banner-docentes.png?v=1" alt="Ingresar como Docentes">
-        </button>
-        <button type="button" class="portal-banner-btn" data-rol="ADMIN">
-          <img src="banner-administrador.png?v=1" alt="Ingresar como Administrador">
-        </button>
-      </div>
-    </section>`;
-  document.querySelectorAll('.portal-banner-btn').forEach(b => b.onclick = () => {
-    rolPortal = b.dataset.rol;
-    pintar();
-  });
-}
+$('.marca').onclick = e => { if (sesion) { e.preventDefault(); tab = sesion.rol === 'ADMIN' ? 'estudiantes' : 'cursos'; pintar(); } };
 
 function vistaLogin() {
-  if (!rolPortal) return vistaBienvenida();
-  document.body.classList.remove('modo-bienvenida');
-  const infoRol = {
-    ESTUDIANTE: { etiqueta: 'Estudiantes', demoUser: 'ana.martinez@ut.edu.co', demoPass: '1000000001' },
-    DOCENTE: { etiqueta: 'Docentes', demoUser: 'carlos.rojas@ut.edu.co', demoPass: '1000000002' },
-    ADMIN: { etiqueta: 'Administrador', demoUser: 'admin@ut.edu.co', demoPass: 'password123' },
-  }[rolPortal];
   $('#main').innerHTML = `
-    <section class="bienvenida-login"><span class="eyebrow">SERVICIOS ACADÉMICOS · ${esc(infoRol.etiqueta.toUpperCase())}</span><h1>La información de tus<br>estudiantes, organizada.</h1><p>Gestiona el registro de estudiantes y acompaña cada etapa de su proceso académico.</p>
+    <section class="bienvenida-login"><span class="eyebrow">SERVICIOS ACADÉMICOS</span><h1>La información de tus<br>estudiantes, organizada.</h1><p>Gestiona el registro de estudiantes y acompaña cada etapa de su proceso académico.</p>
       <div class="login-servicios"><div><span>01</span><div><strong>Registro estudiantil</strong><p>Información personal y académica organizada.</p></div></div><div><span>02</span><div><strong>Oferta y matrículas</strong><p>Cursos, docentes y asignaturas en un solo espacio.</p></div></div><div><span>03</span><div><strong>Seguimiento de pagos</strong><p>Consulta de órdenes e historial de transacciones.</p></div></div></div><div class="login-pie">Universidad del Tolima <span>Ingeniería de Sistemas · IDEAD</span></div></section>
     <div class="card login">
-      <div class="login-volver-barra">
-        <button type="button" class="btn-volver-rol" id="volver-rol">← Cambiar perfil</button>
-        <span class="tag ACTIVA">Perfil: ${esc(infoRol.etiqueta)}</span>
-      </div>
       <img class="login-logo" src="logo-ut.png?v=2" alt="Universidad del Tolima">
       <h2 class="login-titulo">Registro Académico</h2>
       <div class="login-campos">
@@ -127,11 +84,7 @@ function vistaLogin() {
         <button class="b gris" data-u="ana.martinez@ut.edu.co" data-p="1000000001">Estudiante</button>
       </div>
     </div>`;
-  $('#volver-rol').onclick = () => { rolPortal = null; pintar(); };
-  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
-    $('#email').value = b.dataset.u;
-    $('#pass').value = b.dataset.p || 'password123';
-  });
+  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { $('#email').value = b.dataset.u; $('#pass').value = b.dataset.p || 'password123'; });
   const entrar = async () => {
     try {
       const d = await api('POST', '/auth/login', { email: $('#email').value.trim(), password: $('#pass').value });
@@ -147,7 +100,6 @@ function vistaLogin() {
 // ---------- Estructura ----------
 function pintar() {
   document.body.classList.toggle('autenticado', !!sesion);
-  if (sesion) document.body.classList.remove('modo-bienvenida');
   $('#salir').style.display = sesion ? '' : 'none';
   $('#cambiar-clave').style.display = sesion ? '' : 'none';
   $('#quien').innerHTML = sesion ? `<span class="avatar-cuenta">${esc(sesion.nombre.charAt(0))}</span><span><strong>${esc(sesion.nombre)}</strong><small>${({ADMIN:'Administrador',DOCENTE:'Docente',ESTUDIANTE:'Estudiante'})[sesion.rol] || ''}</small></span>` : '';
@@ -168,13 +120,8 @@ function pintar() {
     notificaciones:['Centro de avisos','Encuentra las novedades de tus procesos académicos.'],
     operacion:['Operación del sistema','Consulta los indicadores de la aplicación y la trazabilidad de sus cambios.']
   }[tab];
-  const bannerSeccion = tab === 'estudiantes' || sesion.rol === 'ESTUDIANTE'
-    ? ['banner-estudiantes.png?v=1', 'Estudiantes']
-    : (tab === 'docentes' || sesion.rol === 'DOCENTE'
-      ? ['banner-docentes.png?v=1', 'Docentes']
-      : ['banner-administrador.png?v=1', 'Administrador']);
   $('#main').innerHTML = `<aside class="barra-lateral"><span class="nav-titulo">GESTIÓN ACADÉMICA</span><nav aria-label="Navegación principal">${tabs.map(([k, n]) => `<button data-t="${k}" class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${icono(k)}<span>${n}</span>${k === tab ? '<i></i>' : ''}</button>`).join('')}</nav><div class="lateral-pie"><span class="lateral-emblema">RA</span><strong>Información conectada</strong><p>Registro, formación y seguimiento académico.</p><small>Portal universitario</small></div></aside>
-    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><div class="banner-encabezado"><img src="${bannerSeccion[0]}" alt="Módulo ${bannerSeccion[1]}"></div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro Académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
+    <div class="contenido"><div class="ruta-pagina">Portal académico <span>/</span> ${esc(tabs.find(t => t[0] === tab)?.[1] || '')}</div><section class="encabezado-pagina"><div><span class="eyebrow">GESTIÓN UNIVERSITARIA</span><h1>${info[0]}</h1><p>${info[1]}</p></div><span class="etiqueta-acceso">${icono('seguridad')} Acceso por rol</span></section><div id="vista"></div><footer>Registro Académico <span>Universidad del Tolima · IDEAD</span></footer></div>`;
   document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; pintar(); });
   ({ cursos: vistaCursos, matriculas: vistaMatriculas, estudiantes: vistaEstudiantes, docentes: vistaDocentes, pagos: vistaPagos, notificaciones: vistaNotificaciones, operacion: vistaOperacion })[tab]();
 }

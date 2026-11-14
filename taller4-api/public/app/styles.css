@@ -29,18 +29,6 @@ header{height:82px;background:#fff;border-bottom:2px solid var(--rojo-ut);displa
 #salir{background:transparent;border:1px solid var(--borde);color:#52525b;padding:7px 14px;font-size:12px;font-weight:500}
 
 main{max-width:1120px;margin:48px auto;padding:0 24px;display:grid;grid-template-columns:1.05fr 1fr;align-items:stretch}
-.modo-bienvenida main{max-width:880px;margin:38px auto 50px;display:block}
-.portal-bienvenida{background:#fff;border:1px solid var(--borde);border-top:4px solid var(--rojo-ut);border-radius:16px;padding:38px 44px 42px;box-shadow:0 12px 34px rgba(0,0,0,.04)}
-.portal-bienvenida-encabezado{text-align:center;margin-bottom:28px}
-.portal-bienvenida-encabezado h1{font-size:30px;font-weight:500;color:#222226;margin:6px 0 8px}
-.portal-bienvenida-encabezado p{font-size:14px;color:#73737a;margin:0}
-.portal-banners{display:flex;flex-direction:column;gap:18px;max-width:780px;margin:0 auto}
-.portal-banner-btn{padding:0;border:2px solid transparent;border-radius:13px;overflow:hidden;background:transparent;display:block;width:100%;box-shadow:0 8px 22px rgba(0,0,0,.09);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
-.portal-banner-btn:hover{transform:translateY(-3px) scale(1.005);border-color:var(--rojo-ut);box-shadow:0 14px 30px rgba(239,43,45,.18)}
-.portal-banner-btn img{display:block;width:100%;height:auto}
-.login-volver-barra{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.btn-volver-rol{background:transparent;border:0;color:#73737a;font-size:12px;font-weight:500;padding:4px 0;transition:color .15s}
-.btn-volver-rol:hover{color:var(--rojo-ut)}
 .bienvenida-login{background:linear-gradient(155deg,#1e1e24 0%,#2b1619 100%);border-radius:16px 0 0 16px;padding:52px 46px;color:white;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;border-top:4px solid var(--rojo-ut)}
 .bienvenida-login:after{content:"";position:absolute;width:320px;height:320px;border:50px solid rgba(239,43,45,.14);border-radius:50%;right:-165px;bottom:-150px;pointer-events:none}
 .bienvenida-login .eyebrow{color:#fca5a5;margin-bottom:20px}
@@ -51,8 +39,6 @@ main{max-width:1120px;margin:48px auto;padding:0 24px;display:grid;grid-template
 .login-servicios>div>span{background:rgba(239,43,45,.18);border:1px solid rgba(248,113,113,.35);color:#fca5a5;border-radius:8px;width:34px;height:34px;display:grid;place-items:center;font-size:10.5px;font-weight:600;flex-shrink:0}
 .login-servicios strong{font-size:12.5px;font-weight:500;color:#f4f4f5}
 .login-servicios p{font-size:11.5px;color:#a1a1aa;margin:4px 0 0}
-.banner-encabezado{margin-bottom:22px;border-radius:12px;overflow:hidden;border:1px solid var(--borde);box-shadow:0 4px 14px rgba(0,0,0,.04);max-width:760px}
-.banner-encabezado img{display:block;width:100%;height:auto}
 .login-pie{border-top:1px solid rgba(255,255,255,.12);padding-top:18px;color:#e4e4e7;font-size:11.5px;position:relative;z-index:1}
 .login-pie span{display:block;color:#fca5a5;font-size:10.5px;margin-top:4px}
 
